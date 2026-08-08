@@ -1,0 +1,14 @@
+{
+  "name": "Daily",
+  "short_name": "Daily",
+  "description": "Personal growth, productivity and accountability tracker for your 2026 routine.",
+  "start_url": "./routine_dashboard.html",
+  "display": "standalone",
+  "background_color": "#EEF1E6",
+  "theme_color": "#EEF1E6",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

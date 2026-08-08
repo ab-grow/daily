@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#EEF1E6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Daily">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<title>What Shall I Do in 2026?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EEF1E6;
+    --bg-deep:#E4E9DA;
+    --paper:#FBFAF5;
+    --ink:#1E2A20;
+    --ink-soft:#57634F;
+    --ink-faint:#8B9481;
+    --indigo:#262E4C;
+    --indigo-soft:#4A5177;
+    --gold:#C1832C;
+    --gold-soft:#E7B86B;
+    --green:#3A6047;
+    --green-soft:#7FA184;
+    --line:rgba(30,42,32,0.14);
+    --line-soft:rgba(30,42,32,0.08);
+    --radius:14px;
+    --shadow:0 1px 2px rgba(30,42,32,0.06), 0 8px 24px -12px rgba(30,42,32,0.18);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(193,131,44,0.10), transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, rgba(58,96,71,0.10), transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--gold-soft); color:var(--indigo);}
+  .wrap{max-width:960px;margin:0 auto;padding:28px 20px 80px;}
+
+  /* ---------- Header ---------- */
+  header.top{margin-bottom:28px;}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--green);font-weight:500;
+    display:flex;align-items:center;gap:8px;
+  }
+  .eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--gold);display:inline-block;}
+  h1.title{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:clamp(28px,4.4vw,42px);
+    line-height:1.08;
+    margin:8px 0 6px;
+    color:var(--indigo);
+    letter-spacing:-0.01em;
+  }
+  .subtitle{color:var(--ink-soft);font-size:14.5px;max-width:56ch;line-height:1.5;}
+  .header-row{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-top:18px;}
+  .today-badge{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;color:var(--ink-soft);
+    background:var(--paper);border:1px solid var(--line);
+    border-radius:999px;padding:7px 14px;
+    display:flex;align-items:center;gap:8px;
+    box-shadow:var(--shadow);
+  }
+  .streak-pill{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;
+    background:var(--indigo);color:#F3EFE3;
+    border-radius:999px;padding:7px 14px;
+    display:flex;align-items:center;gap:6px;
+    box-shadow:var(--shadow);
+  }
+  .streak-pill b{font-size:14px;}
+
+  /* ---------- Tabs ---------- */
+  nav.tabs{
+    display:flex;gap:4px;margin:26px 0 22px;
+    border-bottom:1px solid var(--line);
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  nav.tabs::-webkit-scrollbar{display:none;}
+  nav.tabs button{
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;font-weight:600;
+    background:none;border:none;cursor:pointer;
+    color:var(--ink-faint);
+    padding:10px 14px 12px;
+    position:relative;white-space:nowrap;
+    transition:color .15s ease;
+  }
+  nav.tabs button .count{
+    font-family:'IBM Plex Mono',monospace;font-weight:400;
+    font-size:11px;color:var(--ink-faint);margin-left:5px;
+  }
+  nav.tabs button:hover{color:var(--ink);}
+  nav.tabs button.active{color:var(--indigo);}
+  nav.tabs button.active::after{
+    content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:2px;
+    background:var(--gold);border-radius:2px;
+  }
+
+  .panel{display:none;animation:fadein .25s ease;}
+  .panel.active{display:block;}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  /* ---------- Overview ---------- */
+  .overview-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:20px;
+  }
+  @media (max-width:720px){.overview-grid{grid-template-columns:1fr;}}
+  .card{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+  }
+  .rings-card{padding:26px 22px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .rings-card svg{width:100%;max-width:270px;height:auto;}
+  .rings-legend{width:100%;display:grid;gap:9px;}
+  .legend-row{display:flex;align-items:center;gap:10px;font-size:13px;}
+  .legend-dot{width:9px;height:9px;border-radius:50%;flex:none;}
+  .legend-label{flex:1;font-weight:600;color:var(--ink);}
+  .legend-val{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);}
+
+  .stats-col{display:flex;flex-direction:column;gap:16px;}
+  .stat-card{padding:18px 20px;}
+  .stat-card .label{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px;
+  }
+  .stat-card .value{font-family:'Fraunces',serif;font-size:26px;color:var(--indigo);}
+  .stat-card .hint{font-size:12.5px;color:var(--ink-soft);margin-top:4px;}
+
+  .glance-card{padding:20px 22px;grid-column:1/-1;}
+  .glance-card h3{
+    font-family:'Fraunces',serif;font-weight:500;font-size:18px;margin:0 0 4px;color:var(--indigo);
+  }
+  .glance-card .subhint{font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;}
+  .glance-list{display:grid;gap:8px;}
+  .glance-item{
+    display:flex;align-items:center;gap:10px;font-size:13.5px;padding:6px 0;
+    border-bottom:1px solid var(--line-soft);
+  }
+  .glance-item:last-child{border-bottom:none;}
+  .glance-item .gi-name{flex:1;}
+  .glance-item.done .gi-name{color:var(--ink-faint);text-decoration:line-through;}
+  .journal-box{padding:20px 22px;}
+  .journal-box h3{font-family:'Fraunces',serif;font-weight:500;font-size:16px;margin:0 0 10px;color:var(--indigo);}
+  textarea.journal{
+    width:100%;min-height:80px;resize:vertical;
+    font-family:'Inter',sans-serif;font-size:13.5px;color:var(--ink);
+    background:var(--bg);border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;line-height:1.5;
+  }
+  textarea.journal:focus{outline:2px solid var(--gold-soft);outline-offset:1px;}
+  .save-hint{font-size:11px;color:var(--ink-faint);margin-top:6px;font-family:'IBM Plex Mono',monospace;}
+
+  /* ---------- Level panels ---------- */
+  .level-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
+  .level-head h2{font-family:'Fraunces',serif;font-weight:500;font-size:22px;color:var(--indigo);margin:0;}
+  .level-progress{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);}
+
+  .item-card{
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:12px;box-shadow:var(--shadow);
+    transition:border-color .15s ease;
+  }
+  .item-card.done{border-color:rgba(58,96,71,0.35);}
+  .item-top{display:flex;align-items:flex-start;gap:12px;}
+  .check-btn{
+    flex:none;width:24px;height:24px;border-radius:7px;
+    border:1.5px solid var(--ink-faint);background:transparent;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;margin-top:2px;
+    transition:all .15s ease;
+  }
+  .check-btn svg{width:14px;height:14px;opacity:0;transition:opacity .15s ease;}
+  .item-card.done .check-btn{background:var(--green);border-color:var(--green);}
+  .item-card.done .check-btn svg{opacity:1;}
+  .item-main{flex:1;min-width:0;}
+  .item-name-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .item-name{font-family:'Fraunces',serif;font-weight:500;font-size:16.5px;color:var(--ink);}
+  .item-card.done .item-name{color:var(--ink-faint);text-decoration:line-through;text-decoration-color:var(--ink-faint);}
+  .item-tag{
+    font-family:'Fraunces',serif;font-style:italic;font-weight:400;font-size:12.5px;
+    color:var(--gold);
+  }
+  .item-meta{display:flex;flex-wrap:wrap;gap:14px;margin-top:7px;}
+  .meta-bit{font-size:12.5px;color:var(--ink-soft);display:flex;gap:5px;}
+  .meta-bit .k{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);align-self:center;}
+  .score-row{display:flex;align-items:center;gap:10px;margin-top:12px;}
+  .score-row .k{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);width:66px;flex:none;}
+  input[type=range]{
+    flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;
+    background:linear-gradient(to right, var(--gold) 0%, var(--gold) var(--pct,0%), var(--line) var(--pct,0%), var(--line) 100%);
+    outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:var(--paper);border:2.5px solid var(--gold);cursor:pointer;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:16px;height:16px;border-radius:50%;background:var(--paper);border:2.5px solid var(--gold);cursor:pointer;
+  }
+  .score-val{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--indigo);width:34px;text-align:right;flex:none;}
+
+  footer.foot{
+    margin-top:44px;padding-top:18px;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;
+  }
+  footer.foot p{font-size:11.5px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;margin:0;}
+  .reset-btn{
+    font-family:'Inter',sans-serif;font-size:12px;color:var(--ink-soft);
+    background:none;border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;
+  }
+  .reset-btn:hover{border-color:var(--ink-faint);color:var(--ink);}
+  .foot-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .foot-actions input[type=file]{display:none;}
+
+  .loading{
+    display:flex;align-items:center;gap:10px;color:var(--ink-soft);font-size:13.5px;
+    padding:40px 0;justify-content:center;font-family:'IBM Plex Mono',monospace;
+  }
+  .spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--gold);animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  button:focus-visible, .check-btn:focus-visible, input:focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
+  @media (prefers-reduced-motion: reduce){*{animation:none !important; transition:none !important;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="eyebrow">Rule of Life · 2026</div>
+    <h1 class="title">What Shall I Do in 2026?</h1>
+    <p class="subtitle">A working rhythm of disciplines, from the daily quiet hour to the yearly retreat — tracked here instead of left to memory.</p>
+    <div class="header-row">
+      <div id="todayBadge" class="today-badge"></div>
+      <div id="streakPill" class="streak-pill">🔥 <b id="streakNum">0</b>&nbsp;day streak</div>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs"></nav>
+
+  <div id="loadingState" class="loading"><span class="spinner"></span> Loading your rhythm…</div>
+  <div id="app" style="display:none;">
+
+    <section class="panel active" id="panel-overview">
+      <div class="overview-grid">
+        <div class="card rings-card">
+          <svg id="ringsSvg" viewBox="0 0 280 280"></svg>
+          <div class="rings-legend" id="ringsLegend"></div>
+        </div>
+        <div class="stats-col">
+          <div class="card stat-card">
+            <div class="label">Today, overall</div>
+            <div class="value" id="statToday">0%</div>
+            <div class="hint" id="statTodayHint">of today's disciplines checked off</div>
+          </div>
+          <div class="card stat-card">
+            <div class="label">Average self-score</div>
+            <div class="value" id="statScore">—</div>
+            <div class="hint">across every item you've scored</div>
+          </div>
+          <div class="card stat-card">
+            <div class="label">Tracked commitments</div>
+            <div class="value" id="statTotal">0</div>
+            <div class="hint">daily, weekly, monthly, quarterly &amp; annual</div>
+          </div>
+        </div>
+        <div class="card glance-card">
+          <h3>Today at a glance</h3>
+          <div class="subhint">Your daily rhythm — check items off as you go through the day.</div>
+          <div class="glance-list" id="glanceList"></div>
+        </div>
+        <div class="card journal-box" style="grid-column:1/-1;">
+          <h3>Daily Evaluation</h3>
+          <textarea class="journal" id="journalToday" placeholder="10 minutes before bed — how did today go? What needs Saturday's revision?"></textarea>
+          <div class="save-hint" id="journalSaveHint">Autosaves as you type</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-daily"></section>
+    <section class="panel" id="panel-weekly"></section>
+    <section class="panel" id="panel-monthly"></section>
+    <section class="panel" id="panel-quarterly"></section>
+    <section class="panel" id="panel-annual"></section>
+
+  </div>
+
+  <footer class="foot">
+    <p>Saved locally on this device · rebuilt from your 2026 routine planner</p>
+    <div class="foot-actions">
+      <button class="reset-btn" id="exportBtn">Export data</button>
+      <button class="reset-btn" id="importBtn">Import data</button>
+      <input type="file" id="importFile" accept="application/json">
+      <button class="reset-btn" id="resetBtn">Reset all progress</button>
+    </div>
+  </footer>
+</div>
+
+<script>
+/* ---------------- Data model ---------------- */
+const LEVELS = [
+  {id:'daily', label:'Daily', short:'Daily', color:'#C1832C'},
+  {id:'weekly', label:'Weekly', short:'Weekly', color:'#B9793B'},
+  {id:'monthly', label:'Monthly', short:'Monthly', color:'#8C7A4A'},
+  {id:'quarterly', label:'Quarterly', short:'Qtrly', color:'#5C7A56'},
+  {id:'annual', label:'Annual', short:'Annual', color:'#3A6047'},
+];
+
+const ITEMS = [
+  // Daily
+  {id:'d1', level:'daily', name:'Daily Quiet Time', timeline:'Every morning', evaluation:'Saturday Revision; Quarterly Review'},
+  {id:'d2', level:'daily', name:'Bible Reading Agenda', timeline:'1 book per day; 10 chapters daily; Reading Weeks', evaluation:'Saturday Review; Quarterly Retreat'},
+  {id:'d16', level:'daily', name:'Research Publications', kind:'project', timeline:'', evaluation:''},
+  {id:'d15', level:'daily', name:'Daily Scripture Memorisation', timeline:'Memorise at least one bible verse a day from the Quiet Time', evaluation:'Saturday Revision; Quarterly Review'},
+  {id:'d3', level:'daily', name:'Daily Prayer', timeline:'At least 2 hours daily', evaluation:'Daily Evaluation'},
+  {id:'d4', level:'daily', name:'Fellowship with the Holy Spirit / Solitude', timeline:'10 minutes after QT every day', evaluation:'Daily Evaluation'},
+  {id:'d5', level:'daily', name:'Daily Witness', timeline:'1 person per day, any time', evaluation:'Saturday Review'},
+  {id:'d6', level:'daily', name:'Daily Sermon Notes', timeline:'Notes on sermons, 3x a week', evaluation:'Saturday Review'},
+  {id:'d7', level:'daily', name:'Daily Skill Search', timeline:'Learn one small skill or idea every day', evaluation:'Daily Evaluation'},
+  {id:'d8', level:'daily', name:'Reading', timeline:'At least an hour a day', evaluation:'Daily Evaluation'},
+  {id:'d9', level:'daily', name:'Compulsory Breakfast', timeline:'Except fasting days', evaluation:'Daily Evaluation'},
+  {id:'d10', level:'daily', name:'Meal Times', timeline:'1pm & 5pm daily; eat little at each meal', evaluation:'Daily Evaluation'},
+  {id:'d11', level:'daily', name:'Morning Jog & Prayer Walk', timeline:'5:00–6:00am daily; except after all/half nights', evaluation:'Daily Evaluation'},
+  {id:'d12', level:'daily', name:'Budget Review', timeline:'During daily evaluation', evaluation:'Daily Evaluation'},
+  {id:'d13', level:'daily', name:'Reach Out to Friends', timeline:'1 hour every day', evaluation:'Daily Evaluation'},
+  {id:'d14', level:'daily', name:'Daily Evaluation', timeline:'10 minutes before praying to go to bed', evaluation:'Every evening'},
+  // Weekly
+  {id:'w1', level:'weekly', name:'Weekly Prayer Session', timeline:'Minimum of 2 hours', evaluation:'Saturday Review'},
+  {id:'w2', level:'weekly', name:'Weekly Bible Study', timeline:'2 hours — Monday & Thursday mornings', evaluation:'Quarterly Retreat'},
+  {id:'w8', level:'weekly', name:'Church Service', kind:'program', timeline:'', evaluation:''},
+  {id:'w3', level:'weekly', name:'Campus Evangelism Time', timeline:'1 campus per week; plan on Sunday', evaluation:'Monthly Assignment Review'},
+  {id:'w9', level:'weekly', name:'Discipleship Classes', kind:'program', timeline:'', evaluation:''},
+  {id:'w4', level:'weekly', name:'Weekly Fast', timeline:'Mondays, 6am–6pm', evaluation:'Saturday Review'},
+  {id:'w10', level:'weekly', name:'GHAFES Team Meetings', kind:'program', timeline:'', evaluation:''},
+  {id:'w5', level:'weekly', name:'Reach Out to Disciples', timeline:'1 hr each on Thursdays + one other day', evaluation:'Saturday Review'},
+  {id:'w11', level:'weekly', name:'Campus Visits', kind:'program', timeline:'', evaluation:''},
+  {id:'w6', level:'weekly', name:'Saturday Review', timeline:'30 min week review after QT revision', evaluation:'Monthly Assignment Review'},
+  {id:'w12', level:'weekly', name:'Bible Mastery Masterclass', kind:'project', timeline:'', evaluation:''},
+  {id:'w7', level:'weekly', name:'Saturday Revision', timeline:"Quiet Times on Saturdays for revising the week's QT and verses", evaluation:''},
+  {id:'w13', level:'weekly', name:'SNEC Meetings', kind:'program', timeline:'', evaluation:''},
+  {id:'w14', level:'weekly', name:'Online Courses', kind:'project', timeline:'Track weekly consistency in current online courses', evaluation:'Saturday Review'},
+  // Monthly
+  {id:'m1', level:'monthly', name:'Gumnazoo All-Nights', timeline:'3rd Friday of every month', evaluation:'Quarterly Retreats'},
+  {id:'m2', level:'monthly', name:'Monthly Half-Night', timeline:'1st Friday of each month', evaluation:'Quarterly Retreats'},
+  {id:'m8', level:'monthly', name:'Management Meetings (×2)', kind:'program', timeline:'', evaluation:''},
+  {id:'m3', level:'monthly', name:'Book Purchase', timeline:'Buy 10 new books every month', evaluation:'Quarterly Retreats'},
+  {id:'m4', level:'monthly', name:'Assignment Review', timeline:'Last Sunday of every month', evaluation:'Quarterly Retreats'},
+  {id:'m5', level:'monthly', name:'Itinerary Planning', timeline:'Review calendar for every month', evaluation:'Monthly Assignment Review'},
+  {id:'m6', level:'monthly', name:'Gift Development Review', timeline:'Monthly evaluation of gift development', evaluation:'Monthly Assignment Review'},
+  {id:'m7', level:'monthly', name:'Monthly Assignment Review', timeline:'Last Monday of every month, after Bible Study, 1hr', evaluation:'Quarterly Retreats'},
+  // Quarterly
+  {id:'q1', level:'quarterly', name:'Quarterly Retreat', timeline:'Last week of every quarter', evaluation:'Annual Retreat'},
+  {id:'q2', level:'quarterly', name:'Bible Reading Weeks', timeline:'Twice every quarter', evaluation:'Quarterly Retreat'},
+  {id:'q5', level:'quarterly', name:'Associates Fellowship Meeting', kind:'program', timeline:'', evaluation:''},
+  {id:'q3', level:'quarterly', name:'Quarterly All-Nights', timeline:'During quarterly retreat', evaluation:'Annual Retreat'},
+  {id:'q4', level:'quarterly', name:'Quarterly Fast', timeline:'During quarterly retreat', evaluation:'Annual Retreat'},
+  // Annual
+  {id:'a1', level:'annual', name:'August Fast', timeline:'July 28 – August 28', evaluation:'Annual Retreat'},
+  {id:'a2', level:'annual', name:'CDM QCR', timeline:'Last weekend of February', evaluation:''},
+  {id:'a3', level:'annual', name:'CDM Disciple Makers Summit', timeline:'First full week of August', evaluation:''},
+  {id:'a4', level:'annual', name:'End of Year Retreat', timeline:'One week in December', evaluation:''},
+];
+
+/* ---------------- Period helpers ---------------- */
+function pad(n){return n<10?'0'+n:''+n;}
+function todayISO(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function isoDate(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function isoWeekKey(d){
+  const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  const dayNum=(date.getUTCDay()+6)%7;
+  date.setUTCDate(date.getUTCDate()-dayNum+3);
+  const firstThursday=new Date(Date.UTC(date.getUTCFullYear(),0,4));
+  const week=1+Math.round(((date-firstThursday)/86400000-3+((firstThursday.getUTCDay()+6)%7))/7);
+  return date.getUTCFullYear()+'-W'+pad(week);
+}
+function monthKey(d){return d.getFullYear()+'-'+pad(d.getMonth()+1);}
+function quarterKey(d){return d.getFullYear()+'-Q'+(Math.floor(d.getMonth()/3)+1);}
+function yearKey(d){return ''+d.getFullYear();}
+const now = new Date();
+const PERIOD_KEY = {
+  daily: todayISO(),
+  weekly: isoWeekKey(now),
+  monthly: monthKey(now),
+  quarterly: quarterKey(now),
+  annual: yearKey(now),
+};
+
+/* ---------------- Storage (localStorage — works fully offline, standalone) ---------------- */
+const STORAGE_KEY = 'routine-tracker-state';
+let state = { checkins:{daily:{},weekly:{},monthly:{},quarterly:{},annual:{}}, scores:{}, journal:{} };
+let saveTimer = null;
+
+async function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      state = Object.assign({checkins:{daily:{},weekly:{},monthly:{},quarterly:{},annual:{}},scores:{},journal:{}}, parsed);
+      for(const lv of ['daily','weekly','monthly','quarterly','annual']){
+        if(!state.checkins[lv]) state.checkins[lv] = {};
+      }
+    }
+  }catch(e){
+    // no existing record, or storage unavailable — start fresh
+    state = { checkins:{daily:{},weekly:{},monthly:{},quarterly:{},annual:{}}, scores:{}, journal:{} };
+  }
+}
+
+function queueSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }catch(e){ console.error('Save failed', e); }
+  }, 350);
+}
+
+/* ---------------- Derived state helpers ---------------- */
+function isChecked(item){
+  const bucket = state.checkins[item.level] || {};
+  const periodBucket = bucket[PERIOD_KEY[item.level]] || {};
+  return !!periodBucket[item.id];
+}
+function toggleChecked(item){
+  const lv = item.level, pk = PERIOD_KEY[lv];
+  if(!state.checkins[lv][pk]) state.checkins[lv][pk] = {};
+  state.checkins[lv][pk][item.id] = !state.checkins[lv][pk][item.id];
+  queueSave();
+}
+function levelCompletion(levelId){
+  const items = ITEMS.filter(i=>i.level===levelId);
+  if(items.length===0) return 0;
+  const done = items.filter(isChecked).length;
+  return done/items.length;
+}
+function overallScoreAverage(){
+  const vals = Object.values(state.scores).filter(v=>typeof v==='number');
+  if(vals.length===0) return null;
+  return vals.reduce((a,b)=>a+b,0)/vals.length;
+}
+
+function computeStreak(){
+  const bucket = state.checkins.daily || {};
+  const totalDaily = ITEMS.filter(i=>i.level==='daily').length;
+  let streak = 0;
+  let cursor = new Date();
+  for(let i=0;i<730;i++){
+    const key = isoDate(cursor);
+    const rec = bucket[key];
+    if(!rec){ break; }
+    const checkedCount = Object.values(rec).filter(Boolean).length;
+    const ratio = totalDaily>0 ? checkedCount/totalDaily : 0;
+    if(ratio >= 0.6){
+      streak++;
+      cursor.setDate(cursor.getDate()-1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+/* ---------------- Rendering ---------------- */
+const tabsEl = document.getElementById('tabs');
+const panels = {
+  overview: document.getElementById('panel-overview'),
+  daily: document.getElementById('panel-daily'),
+  weekly: document.getElementById('panel-weekly'),
+  monthly: document.getElementById('panel-monthly'),
+  quarterly: document.getElementById('panel-quarterly'),
+  annual: document.getElementById('panel-annual'),
+};
+
+function buildTabs(){
+  const defs = [{id:'overview', label:'Overview'}, ...LEVELS.map(l=>({id:l.id,label:l.label}))];
+  tabsEl.innerHTML = defs.map(d=>{
+    const count = d.id==='overview' ? '' : `<span class="count">${ITEMS.filter(i=>i.level===d.id).length}</span>`;
+    return `<button data-tab="${d.id}" class="${d.id==='overview'?'active':''}">${d.label}${count}</button>`;
+  }).join('');
+  tabsEl.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>selectTab(btn.dataset.tab));
+  });
+}
+function selectTab(tabId){
+  tabsEl.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tabId));
+  Object.entries(panels).forEach(([id,el])=>el.classList.toggle('active', id===tabId));
+}
+
+function checkIcon(){
+  return '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.5L13 4.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+
+function renderLevelPanel(levelId){
+  const level = LEVELS.find(l=>l.id===levelId);
+  const items = ITEMS.filter(i=>i.level===levelId);
+  const doneCount = items.filter(isChecked).length;
+  const el = panels[levelId];
+  el.innerHTML = `
+    <div class="level-head">
+      <h2>${level.label}</h2>
+      <div class="level-progress">${doneCount} / ${items.length} this ${levelId==='daily'?'day':levelId==='weekly'?'week':levelId==='monthly'?'month':levelId==='quarterly'?'quarter':'year'}</div>
+    </div>
+    <div class="item-list">
+      ${items.map(itemCardHTML).join('')}
+    </div>
+  `;
+  attachItemHandlers(el, items);
+}
+
+function itemCardHTML(item){
+  const done = isChecked(item);
+  const score = state.scores[item.id];
+  const pct = score ? ((score-1)/9*100) : 0;
+  return `
+    <div class="item-card ${done?'done':''}" data-id="${item.id}">
+      <div class="item-top">
+        <button class="check-btn" data-action="toggle" aria-label="Mark ${item.name} done">${checkIcon()}</button>
+        <div class="item-main">
+          <div class="item-name-row">
+            <span class="item-name">${item.name}</span>
+            ${item.kind==='program' ? `<span class="item-tag">Program</span>` : ''}
+            ${item.kind==='project' ? `<span class="item-tag">Project</span>` : ''}
+          </div>
+          <div class="item-meta">
+            ${item.timeline ? `<span class="meta-bit"><span class="k">Timeline</span>${item.timeline}</span>` : ''}
+            ${item.evaluation ? `<span class="meta-bit"><span class="k">Review</span>${item.evaluation}</span>` : ''}
+          </div>
+          <div class="score-row">
+            <span class="k">Score</span>
+            <input type="range" min="1" max="10" step="1" value="${score||5}" style="--pct:${pct}%" data-action="score">
+            <span class="score-val">${score ? score+'/10' : '—'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function attachItemHandlers(container, items){
+  container.querySelectorAll('.item-card').forEach(card=>{
+    const id = card.dataset.id;
+    const item = items.find(i=>i.id===id) || ITEMS.find(i=>i.id===id);
+    card.querySelector('[data-action="toggle"]').addEventListener('click', ()=>{
+      toggleChecked(item);
+      card.classList.toggle('done');
+      renderAll();
+    });
+    const slider = card.querySelector('[data-action="score"]');
+    const valEl = card.querySelector('.score-val');
+    slider.addEventListener('input', ()=>{
+      const v = parseInt(slider.value,10);
+      slider.style.setProperty('--pct', ((v-1)/9*100)+'%');
+      valEl.textContent = v+'/10';
+    });
+    slider.addEventListener('change', ()=>{
+      state.scores[item.id] = parseInt(slider.value,10);
+      queueSave();
+      renderOverview();
+    });
+  });
+}
+
+function renderGlance(){
+  const items = ITEMS.filter(i=>i.level==='daily');
+  const list = document.getElementById('glanceList');
+  list.innerHTML = items.map(item=>{
+    const done = isChecked(item);
+    return `<div class="glance-item ${done?'done':''}" data-id="${item.id}">
+      <button class="check-btn" data-action="toggle" style="width:18px;height:18px;border-radius:5px;">${checkIcon()}</button>
+      <span class="gi-name">${item.name}</span>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.glance-item').forEach(row=>{
+    const item = items.find(i=>i.id===row.dataset.id);
+    row.querySelector('[data-action="toggle"]').addEventListener('click', ()=>{
+      toggleChecked(item);
+      renderAll();
+    });
+  });
+}
+
+function renderRings(){
+  const svg = document.getElementById('ringsSvg');
+  const cx=140, cy=140, sw=13, gap=4;
+  const baseR = 34;
+  let radius = baseR;
+  const parts = [];
+  const legend = [];
+  // innermost = daily (most frequent), outermost = annual
+  LEVELS.forEach((level, idx)=>{
+    const pct = levelCompletion(level.id);
+    const circumference = 2*Math.PI*radius;
+    const dash = circumference*pct;
+    parts.push(`
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${level.color}22" stroke-width="${sw}"/>
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${level.color}" stroke-width="${sw}"
+        stroke-dasharray="${dash} ${circumference-dash}" stroke-linecap="round"
+        transform="rotate(-90 ${cx} ${cy})"/>
+    `);
+    legend.push({label:level.label, color:level.color, pct});
+    radius += sw+gap;
+  });
+  svg.innerHTML = parts.join('');
+  document.getElementById('ringsLegend').innerHTML = legend.map(l=>`
+    <div class="legend-row">
+      <span class="legend-dot" style="background:${l.color}"></span>
+      <span class="legend-label">${l.label}</span>
+      <span class="legend-val">${Math.round(l.pct*100)}%</span>
+    </div>
+  `).join('');
+}
+
+function renderOverview(){
+  renderRings();
+  renderGlance();
+  const todayPct = Math.round(levelCompletion('daily')*100);
+  document.getElementById('statToday').textContent = todayPct+'%';
+  const avg = overallScoreAverage();
+  document.getElementById('statScore').textContent = avg ? avg.toFixed(1)+' / 10' : '—';
+  document.getElementById('statTotal').textContent = ITEMS.length;
+  document.getElementById('streakNum').textContent = computeStreak();
+}
+
+function renderAll(){
+  renderOverview();
+  LEVELS.forEach(l=>renderLevelPanel(l.id));
+}
+
+/* ---------------- Journal ---------------- */
+function initJournal(){
+  const key = todayISO();
+  const box = document.getElementById('journalToday');
+  box.value = state.journal[key] || '';
+  let t;
+  box.addEventListener('input', ()=>{
+    clearTimeout(t);
+    document.getElementById('journalSaveHint').textContent = 'Saving…';
+    t = setTimeout(()=>{
+      state.journal[key] = box.value;
+      queueSave();
+      document.getElementById('journalSaveHint').textContent = 'Autosaves as you type';
+    }, 400);
+  });
+}
+
+/* ---------------- Header bits ---------------- */
+function initHeader(){
+  const d = new Date();
+  const opts = {weekday:'long', month:'long', day:'numeric', year:'numeric'};
+  document.getElementById('todayBadge').textContent = d.toLocaleDateString('en-US', opts);
+}
+
+/* ---------------- Reset ---------------- */
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(!confirm('This clears all check-ins, scores and journal entries. Continue?')) return;
+  state = { checkins:{daily:{},weekly:{},monthly:{},quarterly:{},annual:{}}, scores:{}, journal:{} };
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){ console.error(e); }
+  renderAll();
+  initJournal();
+});
+
+/* ---------------- Export / Import ---------------- */
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  try{
+    const payload = {
+      app: 'daily-routine-tracker',
+      exportedAt: new Date().toISOString(),
+      state: state,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = todayISO();
+    a.href = url;
+    a.download = `daily-tracker-backup-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }catch(e){
+    console.error('Export failed', e);
+    alert('Export failed — see console for details.');
+  }
+});
+
+const importFileInput = document.getElementById('importFile');
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  importFileInput.value = '';
+  importFileInput.click();
+});
+importFileInput.addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    let parsed;
+    try{
+      parsed = JSON.parse(reader.result);
+    }catch(err){
+      alert('That file is not valid JSON — import cancelled.');
+      return;
+    }
+    const incoming = parsed && parsed.state ? parsed.state : parsed;
+    if(!incoming || typeof incoming !== 'object' || !incoming.checkins){
+      alert("This doesn't look like a tracker backup file — import cancelled.");
+      return;
+    }
+    const doMerge = confirm(
+      'Import this backup?\n\nOK = merge with what\'s on this device (imported check-ins/scores win on conflicts)\nCancel = choose to replace everything instead'
+    );
+    if(doMerge){
+      mergeState(incoming);
+    } else {
+      const doReplace = confirm('Replace ALL current data on this device with the imported backup? This cannot be undone.');
+      if(!doReplace) return;
+      state = Object.assign({checkins:{daily:{},weekly:{},monthly:{},quarterly:{},annual:{}},scores:{},journal:{}}, incoming);
+    }
+    queueSave();
+    renderAll();
+    initJournal();
+    alert('Import complete.');
+  };
+  reader.readAsText(file);
+});
+
+function mergeState(incoming){
+  for(const lv of ['daily','weekly','monthly','quarterly','annual']){
+    const incLevel = (incoming.checkins && incoming.checkins[lv]) || {};
+    if(!state.checkins[lv]) state.checkins[lv] = {};
+    for(const periodKey in incLevel){
+      state.checkins[lv][periodKey] = Object.assign({}, state.checkins[lv][periodKey]||{}, incLevel[periodKey]);
+    }
+  }
+  state.scores = Object.assign({}, state.scores, incoming.scores||{});
+  state.journal = Object.assign({}, state.journal, incoming.journal||{});
+}
+
+/* ---------------- Boot ---------------- */
+(async function init(){
+  buildTabs();
+  initHeader();
+  await loadState();
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  renderAll();
+  initJournal();
+})();
+</script>
+</body>
+</html>
