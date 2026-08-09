@@ -228,8 +228,22 @@
   .slot.current{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;}
   .slot.on{background:var(--green);border-color:var(--green);color:#F3EFE3;}
   .slot.on.current{box-shadow:0 0 0 1px var(--gold);}
-  .slot-grid-weekly .slot{font-size:9.5px;padding:4px 5px;min-width:26px;text-align:center;}
   .slot-grid-quarterly .slot{font-size:12px;padding:7px 12px;}
+
+  .week-picker{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    background:var(--paper);border:1px solid var(--line);border-radius:12px;
+    padding:12px 16px;margin-bottom:16px;box-shadow:var(--shadow);
+  }
+  .week-picker-field{display:flex;align-items:center;gap:8px;}
+  .week-picker-field .k{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);}
+  .week-picker select{
+    font-family:'Inter',sans-serif;font-size:13px;color:var(--ink);
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:6px 10px;cursor:pointer;
+  }
+  .week-picker select:focus-visible{outline:2px solid var(--gold);}
+  .week-picker .reset-btn{margin-left:auto;}
 
   footer.foot{
     margin-top:44px;padding-top:18px;border-top:1px solid var(--line);
@@ -450,9 +464,39 @@ function slotsFor(level){
   return [{key:PERIOD_KEY[level], label:'', current:true}];
 }
 
+/* Weeks grouped by month, for the Weekly tab's month → week dropdown.
+   A week is assigned to the month containing its Thursday (the ISO-8601
+   convention — matches how isoWeekKey already numbers weeks), so weeks
+   that straddle a month boundary land somewhere sensible either way. */
+function weeksByMonth(){
+  const weeks = slotsFor('weekly');
+  const byMonth = Array.from({length:12}, ()=>[]);
+  weeks.forEach(w=>{
+    const wn = parseInt(w.key.split('-W')[1],10);
+    // find the Thursday of this ISO week
+    const jan4 = new Date(YEAR,0,4);
+    const jan4Day = (jan4.getDay()+6)%7; // 0=Mon
+    const week1Thursday = new Date(jan4); week1Thursday.setDate(jan4.getDate()-jan4Day+3);
+    const thursday = new Date(week1Thursday); thursday.setDate(week1Thursday.getDate()+(wn-1)*7);
+    const monthIdx = thursday.getMonth();
+    byMonth[monthIdx].push(w);
+  });
+  return byMonth;
+}
+function selectedWeekLabel(weekKey){
+  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const byMonth = weeksByMonth();
+  for(let m=0;m<12;m++){
+    const found = byMonth[m].find(w=>w.key===weekKey);
+    if(found) return `${monthNames[m]} — ${found.label}${found.current?' (current)':''}`;
+  }
+  return weekKey;
+}
+
 /* ---------------- Storage (localStorage — works fully offline, standalone) ---------------- */
 const STORAGE_KEY = 'routine-tracker-state';
 let state = { checkins:{daily:{},weekly:{},monthly:{},quarterly:{},annual:{}}, scores:{}, journal:{} };
+let selectedWeekKey = PERIOD_KEY.weekly; // which week the Weekly tab is currently showing
 let saveTimer = null;
 
 async function loadState(){
@@ -584,20 +628,69 @@ function renderLevelPanel(levelId){
   const level = LEVELS.find(l=>l.id===levelId);
   const items = ITEMS.filter(i=>i.level===levelId);
   const el = panels[levelId];
-  const multiSlot = (levelId==='monthly' || levelId==='quarterly' || levelId==='weekly');
-  const progressLabel = multiSlot
+  const gridSlot = (levelId==='monthly' || levelId==='quarterly');
+  const isWeekly = (levelId==='weekly');
+  const progressLabel = (gridSlot || isWeekly)
     ? `${Math.round(levelCompletion(levelId)*100)}% on track year-to-date`
     : `${items.filter(isChecked).length} / ${items.length} this ${levelId==='daily'?'day':'year'}`;
+
   el.innerHTML = `
     <div class="level-head">
       <h2>${level.label}</h2>
       <div class="level-progress">${progressLabel}</div>
     </div>
+    ${isWeekly ? weekPickerHTML() : ''}
     <div class="item-list">
-      ${items.map(item=>itemCardHTML(item, multiSlot)).join('')}
+      ${items.map(item=>itemCardHTML(item, gridSlot, isWeekly)).join('')}
     </div>
   `;
   attachItemHandlers(el, items);
+  if(isWeekly) attachWeekPickerHandlers(el, items);
+}
+
+function weekPickerHTML(){
+  const byMonth = weeksByMonth();
+  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const selectedMonthIdx = byMonth.findIndex(ws=>ws.some(w=>w.key===selectedWeekKey));
+  return `
+    <div class="week-picker">
+      <div class="week-picker-field">
+        <span class="k">Month</span>
+        <select id="weekPickerMonth">
+          ${monthNames.map((n,i)=>`<option value="${i}" ${i===selectedMonthIdx?'selected':''}>${n}</option>`).join('')}
+        </select>
+      </div>
+      <div class="week-picker-field">
+        <span class="k">Week</span>
+        <select id="weekPickerWeek">
+          ${byMonth[selectedMonthIdx].map(w=>`<option value="${w.key}" ${w.key===selectedWeekKey?'selected':''}>${w.label}${w.current?' · current':''}</option>`).join('')}
+        </select>
+      </div>
+      <button class="reset-btn" id="weekPickerToday" type="button">Jump to current week</button>
+    </div>
+  `;
+}
+
+function attachWeekPickerHandlers(container, items){
+  const monthSel = container.querySelector('#weekPickerMonth');
+  const weekSel = container.querySelector('#weekPickerWeek');
+  const todayBtn = container.querySelector('#weekPickerToday');
+  const byMonth = weeksByMonth();
+
+  monthSel.addEventListener('change', ()=>{
+    const idx = parseInt(monthSel.value,10);
+    const weeksInMonth = byMonth[idx];
+    selectedWeekKey = weeksInMonth[0].key; // default to first week of newly chosen month
+    renderLevelPanel('weekly');
+  });
+  weekSel.addEventListener('change', ()=>{
+    selectedWeekKey = weekSel.value;
+    renderLevelPanel('weekly');
+  });
+  todayBtn.addEventListener('click', ()=>{
+    selectedWeekKey = PERIOD_KEY.weekly;
+    renderLevelPanel('weekly');
+  });
 }
 
 function slotGridHTML(item){
@@ -612,11 +705,11 @@ function slotGridHTML(item){
   `;
 }
 
-function itemCardHTML(item, multiSlot){
+function itemCardHTML(item, gridSlot, isWeekly){
   const score = state.scores[item.id];
   const pct = score ? ((score-1)/9*100) : 0;
 
-  if(multiSlot){
+  if(gridSlot){
     const slots = slotsFor(item.level);
     const curIdx = currentIndexFor(item.level);
     const doneThisSlot = isSlotChecked(item, slots[curIdx].key);
@@ -634,6 +727,33 @@ function itemCardHTML(item, multiSlot){
               ${item.evaluation ? `<span class="meta-bit"><span class="k">Review</span>${item.evaluation}</span>` : ''}
             </div>
             ${slotGridHTML(item)}
+            <div class="score-row">
+              <span class="k">Score</span>
+              <input type="range" min="1" max="10" step="1" value="${score||5}" style="--pct:${pct}%" data-action="score">
+              <span class="score-val">${score ? score+'/10' : '—'}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if(isWeekly){
+    const done = isSlotChecked(item, selectedWeekKey);
+    return `
+      <div class="item-card ${done?'done':''}" data-id="${item.id}">
+        <div class="item-top">
+          <button class="check-btn" data-action="toggle-week" data-slot="${selectedWeekKey}" aria-label="Mark ${item.name} done for ${selectedWeekLabel(selectedWeekKey)}">${checkIcon()}</button>
+          <div class="item-main">
+            <div class="item-name-row">
+              <span class="item-name">${item.name}</span>
+              ${item.kind==='program' ? `<span class="item-tag">Program</span>` : ''}
+              ${item.kind==='project' ? `<span class="item-tag">Project</span>` : ''}
+            </div>
+            <div class="item-meta">
+              ${item.timeline ? `<span class="meta-bit"><span class="k">Timeline</span>${item.timeline}</span>` : ''}
+              ${item.evaluation ? `<span class="meta-bit"><span class="k">Review</span>${item.evaluation}</span>` : ''}
+            </div>
             <div class="score-row">
               <span class="k">Score</span>
               <input type="range" min="1" max="10" step="1" value="${score||5}" style="--pct:${pct}%" data-action="score">
@@ -681,6 +801,15 @@ function attachItemHandlers(container, items){
         toggleChecked(item);
         card.classList.toggle('done');
         renderAll();
+      });
+    }
+    const toggleWeekBtn = card.querySelector('[data-action="toggle-week"]');
+    if(toggleWeekBtn){
+      toggleWeekBtn.addEventListener('click', ()=>{
+        toggleSlot(item, toggleWeekBtn.dataset.slot);
+        card.classList.toggle('done');
+        renderOverview(); // avoid re-rendering the week picker mid-interaction
+        renderLevelPanel('weekly');
       });
     }
     card.querySelectorAll('.slot').forEach(slotBtn=>{
