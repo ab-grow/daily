@@ -217,6 +217,20 @@
   }
   .score-val{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--indigo);width:34px;text-align:right;flex:none;}
 
+  .slot-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+  .slot{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:500;
+    border:1px solid var(--line);background:var(--bg);color:var(--ink-soft);
+    border-radius:6px;padding:5px 7px;cursor:pointer;line-height:1;
+    transition:all .12s ease;
+  }
+  .slot:hover{border-color:var(--ink-faint);}
+  .slot.current{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;}
+  .slot.on{background:var(--green);border-color:var(--green);color:#F3EFE3;}
+  .slot.on.current{box-shadow:0 0 0 1px var(--gold);}
+  .slot-grid-weekly .slot{font-size:9.5px;padding:4px 5px;min-width:26px;text-align:center;}
+  .slot-grid-quarterly .slot{font-size:12px;padding:7px 12px;}
+
   footer.foot{
     margin-top:44px;padding-top:18px;border-top:1px solid var(--line);
     display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;
@@ -403,6 +417,39 @@ const PERIOD_KEY = {
   annual: yearKey(now),
 };
 
+/* Full list of period slots for the current year, per level — this is what
+   lets Quarterly show all 4 quarters, Monthly all 12 months, Weekly all
+   ~52 weeks, instead of just a single "this period" checkbox. */
+const YEAR = now.getFullYear();
+function currentIndexFor(level){
+  if(level==='monthly') return now.getMonth(); // 0-11
+  if(level==='quarterly') return Math.floor(now.getMonth()/3); // 0-3
+  if(level==='weekly') return parseInt(isoWeekKey(now).split('-W')[1],10)-1; // 0-51/52
+  return 0;
+}
+function slotsFor(level){
+  if(level==='monthly'){
+    const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return names.map((n,i)=>({key:YEAR+'-'+pad(i+1), label:n, current:i===now.getMonth()}));
+  }
+  if(level==='quarterly'){
+    return [0,1,2,3].map(i=>({key:YEAR+'-Q'+(i+1), label:'Q'+(i+1), current:i===Math.floor(now.getMonth()/3)}));
+  }
+  if(level==='weekly'){
+    // ISO weeks in this year (52 or 53) — compute by walking Dec 28 (always in the last ISO week)
+    const dec28 = new Date(YEAR,11,28);
+    const lastWeek = parseInt(isoWeekKey(dec28).split('-W')[1],10);
+    const curWeek = parseInt(isoWeekKey(now).split('-W')[1],10);
+    const slots=[];
+    for(let w=1; w<=lastWeek; w++){
+      slots.push({key:YEAR+'-W'+pad(w), label:'W'+w, current:w===curWeek});
+    }
+    return slots;
+  }
+  // daily and annual keep the single-slot model (handled separately)
+  return [{key:PERIOD_KEY[level], label:'', current:true}];
+}
+
 /* ---------------- Storage (localStorage — works fully offline, standalone) ---------------- */
 const STORAGE_KEY = 'routine-tracker-state';
 let state = { checkins:{daily:{},weekly:{},monthly:{},quarterly:{},annual:{}}, scores:{}, journal:{} };
@@ -439,15 +486,40 @@ function isChecked(item){
   const periodBucket = bucket[PERIOD_KEY[item.level]] || {};
   return !!periodBucket[item.id];
 }
-function toggleChecked(item){
-  const lv = item.level, pk = PERIOD_KEY[lv];
-  if(!state.checkins[lv][pk]) state.checkins[lv][pk] = {};
-  state.checkins[lv][pk][item.id] = !state.checkins[lv][pk][item.id];
+function isSlotChecked(item, slotKey){
+  const bucket = state.checkins[item.level] || {};
+  const periodBucket = bucket[slotKey] || {};
+  return !!periodBucket[item.id];
+}
+function toggleSlot(item, slotKey){
+  const lv = item.level;
+  if(!state.checkins[lv][slotKey]) state.checkins[lv][slotKey] = {};
+  state.checkins[lv][slotKey][item.id] = !state.checkins[lv][slotKey][item.id];
   queueSave();
+}
+function toggleChecked(item){
+  toggleSlot(item, PERIOD_KEY[item.level]);
 }
 function levelCompletion(levelId){
   const items = ITEMS.filter(i=>i.level===levelId);
   if(items.length===0) return 0;
+  if(levelId==='monthly' || levelId==='quarterly' || levelId==='weekly'){
+    // year-to-date: how many (item, elapsed slot) pairs are checked, out of
+    // how many have happened so far this year — so "on track" reads 100%
+    // rather than penalizing you for future slots that haven't arrived yet.
+    const slots = slotsFor(levelId);
+    const curIdx = currentIndexFor(levelId);
+    const elapsed = slots.slice(0, curIdx+1);
+    if(elapsed.length===0) return 0;
+    let done=0, total=0;
+    items.forEach(item=>{
+      elapsed.forEach(slot=>{
+        total++;
+        if(isSlotChecked(item, slot.key)) done++;
+      });
+    });
+    return total>0 ? done/total : 0;
+  }
   const done = items.filter(isChecked).length;
   return done/items.length;
 }
@@ -511,24 +583,69 @@ function checkIcon(){
 function renderLevelPanel(levelId){
   const level = LEVELS.find(l=>l.id===levelId);
   const items = ITEMS.filter(i=>i.level===levelId);
-  const doneCount = items.filter(isChecked).length;
   const el = panels[levelId];
+  const multiSlot = (levelId==='monthly' || levelId==='quarterly' || levelId==='weekly');
+  const progressLabel = multiSlot
+    ? `${Math.round(levelCompletion(levelId)*100)}% on track year-to-date`
+    : `${items.filter(isChecked).length} / ${items.length} this ${levelId==='daily'?'day':'year'}`;
   el.innerHTML = `
     <div class="level-head">
       <h2>${level.label}</h2>
-      <div class="level-progress">${doneCount} / ${items.length} this ${levelId==='daily'?'day':levelId==='weekly'?'week':levelId==='monthly'?'month':levelId==='quarterly'?'quarter':'year'}</div>
+      <div class="level-progress">${progressLabel}</div>
     </div>
     <div class="item-list">
-      ${items.map(itemCardHTML).join('')}
+      ${items.map(item=>itemCardHTML(item, multiSlot)).join('')}
     </div>
   `;
   attachItemHandlers(el, items);
 }
 
-function itemCardHTML(item){
-  const done = isChecked(item);
+function slotGridHTML(item){
+  const slots = slotsFor(item.level);
+  return `
+    <div class="slot-grid slot-grid-${item.level}">
+      ${slots.map(s=>{
+        const on = isSlotChecked(item, s.key);
+        return `<button class="slot ${on?'on':''} ${s.current?'current':''}" data-slot="${s.key}" title="${s.label}${s.current?' (current)':''}">${s.label}</button>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function itemCardHTML(item, multiSlot){
   const score = state.scores[item.id];
   const pct = score ? ((score-1)/9*100) : 0;
+
+  if(multiSlot){
+    const slots = slotsFor(item.level);
+    const curIdx = currentIndexFor(item.level);
+    const doneThisSlot = isSlotChecked(item, slots[curIdx].key);
+    return `
+      <div class="item-card ${doneThisSlot?'done':''}" data-id="${item.id}">
+        <div class="item-top">
+          <div class="item-main" style="width:100%;">
+            <div class="item-name-row">
+              <span class="item-name">${item.name}</span>
+              ${item.kind==='program' ? `<span class="item-tag">Program</span>` : ''}
+              ${item.kind==='project' ? `<span class="item-tag">Project</span>` : ''}
+            </div>
+            <div class="item-meta">
+              ${item.timeline ? `<span class="meta-bit"><span class="k">Timeline</span>${item.timeline}</span>` : ''}
+              ${item.evaluation ? `<span class="meta-bit"><span class="k">Review</span>${item.evaluation}</span>` : ''}
+            </div>
+            ${slotGridHTML(item)}
+            <div class="score-row">
+              <span class="k">Score</span>
+              <input type="range" min="1" max="10" step="1" value="${score||5}" style="--pct:${pct}%" data-action="score">
+              <span class="score-val">${score ? score+'/10' : '—'}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  const done = isChecked(item);
   return `
     <div class="item-card ${done?'done':''}" data-id="${item.id}">
       <div class="item-top">
@@ -558,10 +675,19 @@ function attachItemHandlers(container, items){
   container.querySelectorAll('.item-card').forEach(card=>{
     const id = card.dataset.id;
     const item = items.find(i=>i.id===id) || ITEMS.find(i=>i.id===id);
-    card.querySelector('[data-action="toggle"]').addEventListener('click', ()=>{
-      toggleChecked(item);
-      card.classList.toggle('done');
-      renderAll();
+    const toggleBtn = card.querySelector('[data-action="toggle"]');
+    if(toggleBtn){
+      toggleBtn.addEventListener('click', ()=>{
+        toggleChecked(item);
+        card.classList.toggle('done');
+        renderAll();
+      });
+    }
+    card.querySelectorAll('.slot').forEach(slotBtn=>{
+      slotBtn.addEventListener('click', ()=>{
+        toggleSlot(item, slotBtn.dataset.slot);
+        renderAll();
+      });
     });
     const slider = card.querySelector('[data-action="score"]');
     const valEl = card.querySelector('.score-val');
