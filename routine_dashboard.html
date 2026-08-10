@@ -244,6 +244,15 @@
   }
   .week-picker select:focus-visible{outline:2px solid var(--gold);}
   .week-picker .reset-btn{margin-left:auto;}
+  .day-picker-label{
+    font-family:'Fraunces',serif;font-style:italic;font-size:13.5px;color:var(--ink-soft);
+  }
+  .week-picker input[type=date]{
+    font-family:'Inter',sans-serif;font-size:13px;color:var(--ink);
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:5px 9px;cursor:pointer;
+  }
+  .week-picker input[type=date]:focus-visible{outline:2px solid var(--gold);}
 
   footer.foot{
     margin-top:44px;padding-top:18px;border-top:1px solid var(--line);
@@ -410,6 +419,18 @@ const ITEMS = [
 /* ---------------- Period helpers ---------------- */
 function pad(n){return n<10?'0'+n:''+n;}
 function todayISO(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function shiftDayISO(dayKey, delta){
+  const [y,m,d] = dayKey.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate()+delta);
+  return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+}
+function formatDayLabel(dayKey){
+  const [y,m,d] = dayKey.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  const opts = {weekday:'long', month:'long', day:'numeric', year:'numeric'};
+  return dt.toLocaleDateString('en-US', opts);
+}
 function isoDate(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 function isoWeekKey(d){
   const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
@@ -497,6 +518,7 @@ function selectedWeekLabel(weekKey){
 const STORAGE_KEY = 'routine-tracker-state';
 let state = { checkins:{daily:{},weekly:{},monthly:{},quarterly:{},annual:{}}, scores:{}, journal:{} };
 let selectedWeekKey = PERIOD_KEY.weekly; // which week the Weekly tab is currently showing
+let selectedDayKey = PERIOD_KEY.daily; // which day the Daily tab is currently showing
 let saveTimer = null;
 
 async function loadState(){
@@ -630,9 +652,17 @@ function renderLevelPanel(levelId){
   const el = panels[levelId];
   const gridSlot = (levelId==='monthly' || levelId==='quarterly');
   const isWeekly = (levelId==='weekly');
-  const progressLabel = (gridSlot || isWeekly)
-    ? `${Math.round(levelCompletion(levelId)*100)}% on track year-to-date`
-    : `${items.filter(isChecked).length} / ${items.length} this ${levelId==='daily'?'day':'year'}`;
+  const isDaily = (levelId==='daily');
+
+  let progressLabel;
+  if(gridSlot || isWeekly){
+    progressLabel = `${Math.round(levelCompletion(levelId)*100)}% on track year-to-date`;
+  } else if(isDaily){
+    const doneCount = items.filter(i=>isSlotChecked(i, selectedDayKey)).length;
+    progressLabel = `${doneCount} / ${items.length} on ${selectedDayKey===todayISO() ? 'today' : formatDayLabel(selectedDayKey)}`;
+  } else {
+    progressLabel = `${items.filter(isChecked).length} / ${items.length} this year`;
+  }
 
   el.innerHTML = `
     <div class="level-head">
@@ -640,12 +670,58 @@ function renderLevelPanel(levelId){
       <div class="level-progress">${progressLabel}</div>
     </div>
     ${isWeekly ? weekPickerHTML() : ''}
+    ${isDaily ? dayPickerHTML() : ''}
     <div class="item-list">
-      ${items.map(item=>itemCardHTML(item, gridSlot, isWeekly)).join('')}
+      ${items.map(item=>itemCardHTML(item, gridSlot, isWeekly, isDaily)).join('')}
     </div>
   `;
   attachItemHandlers(el, items);
   if(isWeekly) attachWeekPickerHandlers(el, items);
+  if(isDaily) attachDayPickerHandlers(el, items);
+}
+
+function dayPickerHTML(){
+  const isToday = selectedDayKey === todayISO();
+  return `
+    <div class="week-picker">
+      <button class="reset-btn" id="dayPickerPrev" type="button" aria-label="Previous day">&larr; Prev</button>
+      <div class="week-picker-field">
+        <span class="k">Date</span>
+        <input type="date" id="dayPickerDate" value="${selectedDayKey}">
+      </div>
+      <button class="reset-btn" id="dayPickerNext" type="button" aria-label="Next day">Next &rarr;</button>
+      <span class="day-picker-label">${formatDayLabel(selectedDayKey)}${isToday ? ' · today' : ''}</span>
+      ${!isToday ? `<button class="reset-btn" id="dayPickerToday" type="button">Jump to today</button>` : ''}
+    </div>
+  `;
+}
+
+function attachDayPickerHandlers(container){
+  const prevBtn = container.querySelector('#dayPickerPrev');
+  const nextBtn = container.querySelector('#dayPickerNext');
+  const dateInput = container.querySelector('#dayPickerDate');
+  const todayBtn = container.querySelector('#dayPickerToday');
+
+  prevBtn.addEventListener('click', ()=>{
+    selectedDayKey = shiftDayISO(selectedDayKey, -1);
+    renderLevelPanel('daily');
+  });
+  nextBtn.addEventListener('click', ()=>{
+    selectedDayKey = shiftDayISO(selectedDayKey, 1);
+    renderLevelPanel('daily');
+  });
+  dateInput.addEventListener('change', ()=>{
+    if(dateInput.value){
+      selectedDayKey = dateInput.value;
+      renderLevelPanel('daily');
+    }
+  });
+  if(todayBtn){
+    todayBtn.addEventListener('click', ()=>{
+      selectedDayKey = todayISO();
+      renderLevelPanel('daily');
+    });
+  }
 }
 
 function weekPickerHTML(){
@@ -705,7 +781,7 @@ function slotGridHTML(item){
   `;
 }
 
-function itemCardHTML(item, gridSlot, isWeekly){
+function itemCardHTML(item, gridSlot, isWeekly, isDaily){
   const score = state.scores[item.id];
   const pct = score ? ((score-1)/9*100) : 0;
 
@@ -744,6 +820,33 @@ function itemCardHTML(item, gridSlot, isWeekly){
       <div class="item-card ${done?'done':''}" data-id="${item.id}">
         <div class="item-top">
           <button class="check-btn" data-action="toggle-week" data-slot="${selectedWeekKey}" aria-label="Mark ${item.name} done for ${selectedWeekLabel(selectedWeekKey)}">${checkIcon()}</button>
+          <div class="item-main">
+            <div class="item-name-row">
+              <span class="item-name">${item.name}</span>
+              ${item.kind==='program' ? `<span class="item-tag">Program</span>` : ''}
+              ${item.kind==='project' ? `<span class="item-tag">Project</span>` : ''}
+            </div>
+            <div class="item-meta">
+              ${item.timeline ? `<span class="meta-bit"><span class="k">Timeline</span>${item.timeline}</span>` : ''}
+              ${item.evaluation ? `<span class="meta-bit"><span class="k">Review</span>${item.evaluation}</span>` : ''}
+            </div>
+            <div class="score-row">
+              <span class="k">Score</span>
+              <input type="range" min="1" max="10" step="1" value="${score||5}" style="--pct:${pct}%" data-action="score">
+              <span class="score-val">${score ? score+'/10' : '—'}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if(isDaily){
+    const done = isSlotChecked(item, selectedDayKey);
+    return `
+      <div class="item-card ${done?'done':''}" data-id="${item.id}">
+        <div class="item-top">
+          <button class="check-btn" data-action="toggle-day" data-slot="${selectedDayKey}" aria-label="Mark ${item.name} done for ${formatDayLabel(selectedDayKey)}">${checkIcon()}</button>
           <div class="item-main">
             <div class="item-name-row">
               <span class="item-name">${item.name}</span>
@@ -810,6 +913,15 @@ function attachItemHandlers(container, items){
         card.classList.toggle('done');
         renderOverview(); // avoid re-rendering the week picker mid-interaction
         renderLevelPanel('weekly');
+      });
+    }
+    const toggleDayBtn = card.querySelector('[data-action="toggle-day"]');
+    if(toggleDayBtn){
+      toggleDayBtn.addEventListener('click', ()=>{
+        toggleSlot(item, toggleDayBtn.dataset.slot);
+        card.classList.toggle('done');
+        renderOverview();
+        renderLevelPanel('daily');
       });
     }
     card.querySelectorAll('.slot').forEach(slotBtn=>{
