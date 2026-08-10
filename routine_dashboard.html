@@ -406,10 +406,10 @@ const ITEMS = [
   {id:'d11', level:'daily', name:'Morning Jog & Prayer Walk', timeline:'5:00–6:00am daily; except after all/half nights', evaluation:'Daily Evaluation'},
   {id:'d12', level:'daily', name:'Budget Review', timeline:'During daily evaluation', evaluation:'Daily Evaluation'},
   {id:'d13', level:'daily', name:'Reach Out to Friends', timeline:'1 hour every day', evaluation:'Daily Evaluation'},
-  {id:'d14', level:'daily', name:'Daily Evaluation', timeline:'10 minutes before praying to go to bed', evaluation:'Every evening'},
   {id:'d17', level:'daily', name:'Woke Up on Time', timeline:'Every morning', evaluation:'Daily Evaluation'},
   {id:'d18', level:'daily', name:'Slept on Time', timeline:'Every night', evaluation:'Daily Evaluation'},
   {id:'d19', level:'daily', name:'Gym', timeline:'Monday–Friday', evaluation:'Daily Evaluation'},
+  {id:'d14', level:'daily', name:'Daily Evaluation', timeline:'10 minutes before praying to go to bed', evaluation:'Every evening'},
   // Weekly
   {id:'w1', level:'weekly', name:'Weekly Prayer Session', timeline:'Minimum of 2 hours', evaluation:'Saturday Review'},
   {id:'w2', level:'weekly', name:'Weekly Bible Study', timeline:'2 hours — Monday & Thursday mornings', evaluation:'Quarterly Retreat'},
@@ -420,26 +420,26 @@ const ITEMS = [
   {id:'w10', level:'weekly', name:'GHAFES Team Meetings', kind:'program', timeline:'', evaluation:''},
   {id:'w5', level:'weekly', name:'Reach Out to Disciples', timeline:'1 hr each on Thursdays + one other day', evaluation:'Saturday Review'},
   {id:'w11', level:'weekly', name:'Campus Visits', kind:'program', timeline:'', evaluation:''},
-  {id:'w6', level:'weekly', name:'Saturday Review', timeline:'30 min week review after QT revision', evaluation:'Monthly Assignment Review'},
   {id:'w12', level:'weekly', name:'Bible Mastery Masterclass', kind:'project', timeline:'', evaluation:''},
-  {id:'w7', level:'weekly', name:'Saturday Revision', timeline:"Quiet Times on Saturdays for revising the week's QT and verses", evaluation:''},
   {id:'w13', level:'weekly', name:'SNEC Meetings', kind:'program', timeline:'', evaluation:''},
   {id:'w14', level:'weekly', name:'Online Courses', kind:'project', timeline:'Track weekly consistency in current online courses', evaluation:'Saturday Review'},
+  {id:'w6', level:'weekly', name:'Saturday Review', timeline:'30 min week review after QT revision', evaluation:'Monthly Assignment Review'},
+  {id:'w7', level:'weekly', name:'Saturday Revision', timeline:"Quiet Times on Saturdays for revising the week's QT and verses", evaluation:''},
   // Monthly
   {id:'m1', level:'monthly', name:'Gumnazoo All-Nights', timeline:'3rd Friday of every month', evaluation:'Quarterly Retreats'},
   {id:'m2', level:'monthly', name:'Monthly Half-Night', timeline:'1st Friday of each month', evaluation:'Quarterly Retreats'},
   {id:'m8', level:'monthly', name:'Management Meetings (×2)', kind:'program', timeline:'', evaluation:''},
   {id:'m3', level:'monthly', name:'Book Purchase', timeline:'Buy 10 new books every month', evaluation:'Quarterly Retreats'},
-  {id:'m4', level:'monthly', name:'Assignment Review', timeline:'Last Sunday of every month', evaluation:'Quarterly Retreats'},
   {id:'m5', level:'monthly', name:'Itinerary Planning', timeline:'Review calendar for every month', evaluation:'Monthly Assignment Review'},
   {id:'m6', level:'monthly', name:'Gift Development Review', timeline:'Monthly evaluation of gift development', evaluation:'Monthly Assignment Review'},
+  {id:'m4', level:'monthly', name:'Assignment Review', timeline:'Last Sunday of every month', evaluation:'Quarterly Retreats'},
   {id:'m7', level:'monthly', name:'Monthly Assignment Review', timeline:'Last Monday of every month, after Bible Study, 1hr', evaluation:'Quarterly Retreats'},
   // Quarterly
-  {id:'q1', level:'quarterly', name:'Quarterly Retreat', timeline:'Last week of every quarter', evaluation:'Annual Retreat'},
   {id:'q2', level:'quarterly', name:'Bible Reading Weeks', timeline:'Twice every quarter', evaluation:'Quarterly Retreat'},
   {id:'q5', level:'quarterly', name:'Associates Fellowship Meeting', kind:'program', timeline:'', evaluation:''},
   {id:'q3', level:'quarterly', name:'Quarterly All-Nights', timeline:'During quarterly retreat', evaluation:'Annual Retreat'},
   {id:'q4', level:'quarterly', name:'Quarterly Fast', timeline:'During quarterly retreat', evaluation:'Annual Retreat'},
+  {id:'q1', level:'quarterly', name:'Quarterly Retreat', timeline:'Last week of every quarter', evaluation:'Annual Retreat'},
   // Annual
   {id:'a1', level:'annual', name:'August Fast', timeline:'July 28 – August 28', evaluation:'Annual Retreat'},
   {id:'a2', level:'annual', name:'CDM QCR', timeline:'Last weekend of February', evaluation:''},
@@ -516,39 +516,46 @@ function slotsFor(level){
   return [{key:PERIOD_KEY[level], label:'', current:true}];
 }
 
-/* Weeks grouped by month, for the Weekly tab's month → week dropdown.
-   A week is assigned to the month containing its Thursday (the ISO-8601
-   convention — matches how isoWeekKey already numbers weeks), so weeks
-   that straddle a month boundary land somewhere sensible either way. */
-function weeksByMonth(){
-  const weeks = slotsFor('weekly');
-  const byMonth = Array.from({length:12}, ()=>[]);
-  weeks.forEach(w=>{
-    const wn = parseInt(w.key.split('-W')[1],10);
-    // find the Thursday of this ISO week
-    const jan4 = new Date(YEAR,0,4);
-    const jan4Day = (jan4.getDay()+6)%7; // 0=Mon
-    const week1Thursday = new Date(jan4); week1Thursday.setDate(jan4.getDate()-jan4Day+3);
-    const thursday = new Date(week1Thursday); thursday.setDate(week1Thursday.getDate()+(wn-1)*7);
-    const monthIdx = thursday.getMonth();
-    byMonth[monthIdx].push(w);
-  });
-  return byMonth;
+/* Prev/Next navigation helpers for the Weekly and Monthly pickers — mirrors
+   the Daily tab's prev/next/jump-to-today pattern, one slot at a time,
+   rather than a year-to-date grid. */
+function mondayOfWeekKey(weekKey){
+  const [yStr, wStr] = weekKey.split('-W');
+  const y = parseInt(yStr,10), w = parseInt(wStr,10);
+  const jan4 = new Date(y,0,4);
+  const jan4Day = (jan4.getDay()+6)%7; // 0=Mon
+  const week1Monday = new Date(jan4); week1Monday.setDate(jan4.getDate()-jan4Day);
+  const monday = new Date(week1Monday); monday.setDate(week1Monday.getDate()+(w-1)*7);
+  return monday;
 }
-function selectedWeekLabel(weekKey){
-  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const byMonth = weeksByMonth();
-  for(let m=0;m<12;m++){
-    const found = byMonth[m].find(w=>w.key===weekKey);
-    if(found) return `${monthNames[m]} — ${found.label}${found.current?' (current)':''}`;
-  }
-  return weekKey;
+function shiftWeekKey(weekKey, deltaWeeks){
+  const monday = mondayOfWeekKey(weekKey);
+  monday.setDate(monday.getDate()+deltaWeeks*7);
+  return isoWeekKey(monday);
+}
+function formatWeekLabel(weekKey){
+  const monday = mondayOfWeekKey(weekKey);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+  const startStr = monday.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+  const endStr = sunday.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+  return `${startStr} – ${endStr}`;
+}
+function shiftMonthKey(monthKeyStr, delta){
+  const [y,m] = monthKeyStr.split('-').map(Number);
+  const dt = new Date(y, m-1+delta, 1);
+  return dt.getFullYear()+'-'+pad(dt.getMonth()+1);
+}
+function formatMonthLabel(monthKeyStr){
+  const [y,m] = monthKeyStr.split('-').map(Number);
+  const dt = new Date(y, m-1, 1);
+  return dt.toLocaleDateString('en-US', {month:'long', year:'numeric'});
 }
 
 /* ---------------- Storage (localStorage — works fully offline, standalone) ---------------- */
 const STORAGE_KEY = 'routine-tracker-state';
 let state = { checkins:{daily:{},weekly:{},monthly:{},quarterly:{},annual:{}}, scores:{}, journal:{} };
 let selectedWeekKey = PERIOD_KEY.weekly; // which week the Weekly tab is currently showing
+let selectedMonthKey = PERIOD_KEY.monthly; // which month the Monthly tab is currently showing
 let selectedDayKey = PERIOD_KEY.daily; // which day the Daily tab is currently showing
 let saveTimer = null;
 
@@ -600,7 +607,7 @@ function toggleChecked(item){
 function levelCompletion(levelId){
   const items = ITEMS.filter(i=>i.level===levelId);
   if(items.length===0) return 0;
-  if(levelId==='monthly' || levelId==='quarterly' || levelId==='weekly'){
+  if(levelId==='quarterly'){
     // year-to-date: how many (item, elapsed slot) pairs are checked, out of
     // how many have happened so far this year — so "on track" reads 100%
     // rather than penalizing you for future slots that haven't arrived yet.
@@ -681,16 +688,23 @@ function renderLevelPanel(levelId){
   const level = LEVELS.find(l=>l.id===levelId);
   const items = ITEMS.filter(i=>i.level===levelId);
   const el = panels[levelId];
-  const gridSlot = (levelId==='monthly' || levelId==='quarterly');
+  const gridSlot = (levelId==='quarterly');
   const isWeekly = (levelId==='weekly');
+  const isMonthly = (levelId==='monthly');
   const isDaily = (levelId==='daily');
 
   let progressLabel;
-  if(gridSlot || isWeekly){
+  if(gridSlot){
     progressLabel = `${Math.round(levelCompletion(levelId)*100)}% on track year-to-date`;
   } else if(isDaily){
     const doneCount = items.filter(i=>isSlotChecked(i, selectedDayKey)).length;
     progressLabel = `${doneCount} / ${items.length} on ${selectedDayKey===todayISO() ? 'today' : formatDayLabel(selectedDayKey)}`;
+  } else if(isWeekly){
+    const doneCount = items.filter(i=>isSlotChecked(i, selectedWeekKey)).length;
+    progressLabel = `${doneCount} / ${items.length} for the week of ${formatWeekLabel(selectedWeekKey)}`;
+  } else if(isMonthly){
+    const doneCount = items.filter(i=>isSlotChecked(i, selectedMonthKey)).length;
+    progressLabel = `${doneCount} / ${items.length} in ${formatMonthLabel(selectedMonthKey)}`;
   } else {
     progressLabel = `${items.filter(isChecked).length} / ${items.length} this year`;
   }
@@ -701,14 +715,16 @@ function renderLevelPanel(levelId){
       <div class="level-progress">${progressLabel}</div>
     </div>
     ${isWeekly ? weekPickerHTML() : ''}
+    ${isMonthly ? monthPickerHTML() : ''}
     ${isDaily ? dayPickerHTML() : ''}
     <div class="item-list">
-      ${items.map(item=>itemCardHTML(item, gridSlot, isWeekly, isDaily)).join('')}
+      ${items.map(item=>itemCardHTML(item, gridSlot, isWeekly, isDaily, isMonthly)).join('')}
     </div>
   `;
   attachItemHandlers(el, items);
-  if(isWeekly) attachWeekPickerHandlers(el, items);
-  if(isDaily) attachDayPickerHandlers(el, items);
+  if(isWeekly) attachWeekPickerHandlers(el);
+  if(isMonthly) attachMonthPickerHandlers(el);
+  if(isDaily) attachDayPickerHandlers(el);
 }
 
 function dayPickerHTML(){
@@ -756,48 +772,69 @@ function attachDayPickerHandlers(container){
 }
 
 function weekPickerHTML(){
-  const byMonth = weeksByMonth();
-  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const selectedMonthIdx = byMonth.findIndex(ws=>ws.some(w=>w.key===selectedWeekKey));
+  const isCurrent = selectedWeekKey === PERIOD_KEY.weekly;
   return `
     <div class="week-picker">
-      <div class="week-picker-field">
-        <span class="k">Month</span>
-        <select id="weekPickerMonth">
-          ${monthNames.map((n,i)=>`<option value="${i}" ${i===selectedMonthIdx?'selected':''}>${n}</option>`).join('')}
-        </select>
-      </div>
-      <div class="week-picker-field">
-        <span class="k">Week</span>
-        <select id="weekPickerWeek">
-          ${byMonth[selectedMonthIdx].map(w=>`<option value="${w.key}" ${w.key===selectedWeekKey?'selected':''}>${w.label}${w.current?' · current':''}</option>`).join('')}
-        </select>
-      </div>
-      <button class="reset-btn" id="weekPickerToday" type="button">Jump to current week</button>
+      <button class="reset-btn" id="weekPickerPrev" type="button" aria-label="Previous week">&larr; Prev</button>
+      <span class="day-picker-label">${formatWeekLabel(selectedWeekKey)}${isCurrent ? ' · current week' : ''}</span>
+      <button class="reset-btn" id="weekPickerNext" type="button" aria-label="Next week">Next &rarr;</button>
+      ${!isCurrent ? `<button class="reset-btn" id="weekPickerToday" type="button">Jump to current week</button>` : ''}
     </div>
   `;
 }
 
-function attachWeekPickerHandlers(container, items){
-  const monthSel = container.querySelector('#weekPickerMonth');
-  const weekSel = container.querySelector('#weekPickerWeek');
+function attachWeekPickerHandlers(container){
+  const prevBtn = container.querySelector('#weekPickerPrev');
+  const nextBtn = container.querySelector('#weekPickerNext');
   const todayBtn = container.querySelector('#weekPickerToday');
-  const byMonth = weeksByMonth();
 
-  monthSel.addEventListener('change', ()=>{
-    const idx = parseInt(monthSel.value,10);
-    const weeksInMonth = byMonth[idx];
-    selectedWeekKey = weeksInMonth[0].key; // default to first week of newly chosen month
+  prevBtn.addEventListener('click', ()=>{
+    selectedWeekKey = shiftWeekKey(selectedWeekKey, -1);
     renderLevelPanel('weekly');
   });
-  weekSel.addEventListener('change', ()=>{
-    selectedWeekKey = weekSel.value;
+  nextBtn.addEventListener('click', ()=>{
+    selectedWeekKey = shiftWeekKey(selectedWeekKey, 1);
     renderLevelPanel('weekly');
   });
-  todayBtn.addEventListener('click', ()=>{
-    selectedWeekKey = PERIOD_KEY.weekly;
-    renderLevelPanel('weekly');
+  if(todayBtn){
+    todayBtn.addEventListener('click', ()=>{
+      selectedWeekKey = PERIOD_KEY.weekly;
+      renderLevelPanel('weekly');
+    });
+  }
+}
+
+function monthPickerHTML(){
+  const isCurrent = selectedMonthKey === PERIOD_KEY.monthly;
+  return `
+    <div class="week-picker">
+      <button class="reset-btn" id="monthPickerPrev" type="button" aria-label="Previous month">&larr; Prev</button>
+      <span class="day-picker-label">${formatMonthLabel(selectedMonthKey)}${isCurrent ? ' · current month' : ''}</span>
+      <button class="reset-btn" id="monthPickerNext" type="button" aria-label="Next month">Next &rarr;</button>
+      ${!isCurrent ? `<button class="reset-btn" id="monthPickerToday" type="button">Jump to current month</button>` : ''}
+    </div>
+  `;
+}
+
+function attachMonthPickerHandlers(container){
+  const prevBtn = container.querySelector('#monthPickerPrev');
+  const nextBtn = container.querySelector('#monthPickerNext');
+  const todayBtn = container.querySelector('#monthPickerToday');
+
+  prevBtn.addEventListener('click', ()=>{
+    selectedMonthKey = shiftMonthKey(selectedMonthKey, -1);
+    renderLevelPanel('monthly');
   });
+  nextBtn.addEventListener('click', ()=>{
+    selectedMonthKey = shiftMonthKey(selectedMonthKey, 1);
+    renderLevelPanel('monthly');
+  });
+  if(todayBtn){
+    todayBtn.addEventListener('click', ()=>{
+      selectedMonthKey = PERIOD_KEY.monthly;
+      renderLevelPanel('monthly');
+    });
+  }
 }
 
 function slotGridHTML(item){
@@ -812,7 +849,7 @@ function slotGridHTML(item){
   `;
 }
 
-function itemCardHTML(item, gridSlot, isWeekly, isDaily){
+function itemCardHTML(item, gridSlot, isWeekly, isDaily, isMonthly){
   const score = state.scores[item.id];
   const pct = score ? ((score-1)/9*100) : 0;
 
@@ -850,7 +887,34 @@ function itemCardHTML(item, gridSlot, isWeekly, isDaily){
     return `
       <div class="item-card ${done?'done':''}" data-id="${item.id}">
         <div class="item-top">
-          <button class="check-btn" data-action="toggle-week" data-slot="${selectedWeekKey}" aria-label="Mark ${item.name} done for ${selectedWeekLabel(selectedWeekKey)}">${checkIcon()}</button>
+          <button class="check-btn" data-action="toggle-week" data-slot="${selectedWeekKey}" aria-label="Mark ${item.name} done for the week of ${formatWeekLabel(selectedWeekKey)}">${checkIcon()}</button>
+          <div class="item-main">
+            <div class="item-name-row">
+              <span class="item-name">${item.name}</span>
+              ${item.kind==='program' ? `<span class="item-tag">Program</span>` : ''}
+              ${item.kind==='project' ? `<span class="item-tag">Project</span>` : ''}
+            </div>
+            <div class="item-meta">
+              ${item.timeline ? `<span class="meta-bit"><span class="k">Timeline</span>${item.timeline}</span>` : ''}
+              ${item.evaluation ? `<span class="meta-bit"><span class="k">Review</span>${item.evaluation}</span>` : ''}
+            </div>
+            <div class="score-row">
+              <span class="k">Score</span>
+              <input type="range" min="1" max="10" step="1" value="${score||5}" style="--pct:${pct}%" data-action="score">
+              <span class="score-val">${score ? score+'/10' : '—'}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if(isMonthly){
+    const done = isSlotChecked(item, selectedMonthKey);
+    return `
+      <div class="item-card ${done?'done':''}" data-id="${item.id}">
+        <div class="item-top">
+          <button class="check-btn" data-action="toggle-month" data-slot="${selectedMonthKey}" aria-label="Mark ${item.name} done for ${formatMonthLabel(selectedMonthKey)}">${checkIcon()}</button>
           <div class="item-main">
             <div class="item-name-row">
               <span class="item-name">${item.name}</span>
