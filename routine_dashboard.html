@@ -1019,6 +1019,15 @@ function attachItemHandlers(container, items){
         renderLevelPanel('daily');
       });
     }
+    const toggleMonthBtn = card.querySelector('[data-action="toggle-month"]');
+    if(toggleMonthBtn){
+      toggleMonthBtn.addEventListener('click', ()=>{
+        toggleSlot(item, toggleMonthBtn.dataset.slot);
+        card.classList.toggle('done');
+        renderOverview();
+        renderLevelPanel('monthly');
+      });
+    }
     card.querySelectorAll('.slot').forEach(slotBtn=>{
       slotBtn.addEventListener('click', ()=>{
         toggleSlot(item, slotBtn.dataset.slot);
