@@ -276,13 +276,41 @@
 
   button:focus-visible, .check-btn:focus-visible, input:focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
   @media (prefers-reduced-motion: reduce){*{animation:none !important; transition:none !important;}}
+
+  /* ---------- Mobile ---------- */
+  html{overflow-x:hidden;}
+  body{overflow-x:hidden;}
+  img,svg{max-width:100%;}
+  @media (max-width:600px){
+    .wrap{padding:18px 14px 64px;}
+    .header-row{gap:10px;}
+    .today-badge, .streak-pill{font-size:11px;padding:6px 10px;}
+    nav.tabs{margin:20px 0 16px;}
+    nav.tabs button{padding:9px 10px 10px;font-size:13px;}
+    .rings-card{padding:20px 14px;}
+    .stat-card{padding:16px;}
+    .stat-card .value{font-size:22px;}
+    .glance-card, .journal-box{padding:16px;}
+    .item-card{padding:14px;}
+    .item-meta{gap:8px 14px;}
+    .week-picker{padding:10px 12px;gap:10px;}
+    .week-picker-field{flex:1 1 auto;}
+    .week-picker select, .week-picker input[type=date]{width:100%;min-width:0;}
+    .week-picker .reset-btn{margin-left:0;}
+    .day-picker-label{width:100%;}
+    footer.foot{flex-direction:column;align-items:flex-start;}
+    .foot-actions{width:100%;}
+    .foot-actions .reset-btn{flex:1 1 auto;text-align:center;}
+  }
+  .item-name, .meta-bit, .subtitle, .item-tag{overflow-wrap:anywhere;}
+  select, input[type=date], textarea, input[type=text]{max-width:100%;}
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header class="top">
-    <div class="eyebrow">Rule of Life · 2026</div>
+    <div class="eyebrow">Daily Growth · 2026</div>
     <h1 class="title">What Shall I Do in 2026?</h1>
     <p class="subtitle">A working rhythm of disciplines, from the daily quiet hour to the yearly retreat — tracked here instead of left to memory.</p>
     <div class="header-row">
@@ -379,6 +407,9 @@ const ITEMS = [
   {id:'d12', level:'daily', name:'Budget Review', timeline:'During daily evaluation', evaluation:'Daily Evaluation'},
   {id:'d13', level:'daily', name:'Reach Out to Friends', timeline:'1 hour every day', evaluation:'Daily Evaluation'},
   {id:'d14', level:'daily', name:'Daily Evaluation', timeline:'10 minutes before praying to go to bed', evaluation:'Every evening'},
+  {id:'d17', level:'daily', name:'Woke Up on Time', timeline:'Every morning', evaluation:'Daily Evaluation'},
+  {id:'d18', level:'daily', name:'Slept on Time', timeline:'Every night', evaluation:'Daily Evaluation'},
+  {id:'d19', level:'daily', name:'Gym', timeline:'Monday–Friday', evaluation:'Daily Evaluation'},
   // Weekly
   {id:'w1', level:'weekly', name:'Weekly Prayer Session', timeline:'Minimum of 2 hours', evaluation:'Saturday Review'},
   {id:'w2', level:'weekly', name:'Weekly Bible Study', timeline:'2 hours — Monday & Thursday mornings', evaluation:'Quarterly Retreat'},
